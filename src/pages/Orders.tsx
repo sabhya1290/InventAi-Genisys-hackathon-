@@ -1,65 +1,68 @@
 import React, { useState } from 'react';
-import { Plus, Eye, Receipt, Trash2, CheckCircle } from 'lucide-react';
+import { Plus, Eye, Receipt, Trash2 } from 'lucide-react';
 import { useAppStore } from '../store/MockAppStore';
-import type { OrderItem } from '../store/MockAppStore';
 
 export const Orders: React.FC = () => {
   const { orders, products, customers, addOrder, updateOrder, deleteOrder, generateInvoice } = useAppStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [toast, setToast] = useState('');
-  
+
   // New Order State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [orderItems, setOrderItems] = useState<Omit<OrderItem, 'id' | 'subtotal'>[]>([{ product_id: '', quantity: 1, price: 0 }]);
+  const [orderItems, setOrderItems] = useState<{ productId: string; quantity: number; price: number }[]>([
+    { productId: '', quantity: 1, price: 0 }
+  ]);
 
-  const handleAddOrder = (e: React.FormEvent) => {
+  const handleAddOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCustomerId || orderItems.some(item => !item.product_id || item.quantity <= 0)) return;
+    if (!selectedCustomerId || orderItems.some(item => !item.productId || item.quantity <= 0)) return;
 
     const hasStockError = orderItems.some(item => {
-      const prod = products.find(p => p.id === item.product_id);
+      const prod = products.find(p => p._id === item.productId);
       return !prod || prod.stock_quantity === 0 || prod.stock_quantity < item.quantity;
     });
 
     if (hasStockError) {
-      alert("Error: One or more selected products are Out of Stock or the requested quantity exceeds available stock.");
+      alert('Error: One or more selected products are Out of Stock or the requested quantity exceeds available stock.');
       return;
     }
 
-    const fullItems: OrderItem[] = orderItems.map((item) => ({
-      id: `oi-${Math.random()}`,
-      product_id: item.product_id,
+    const fullItems = orderItems.map(item => ({
+      productId: item.productId,
       quantity: item.quantity,
       price: item.price,
-      subtotal: item.quantity * item.price
+      subtotal: item.quantity * item.price,
     }));
 
     const total = fullItems.reduce((acc, curr) => acc + curr.subtotal, 0);
 
-    addOrder({
-      customer_id: selectedCustomerId,
-      status: 'Confirmed', // MVP simplify
+    await addOrder({
+      customerId: selectedCustomerId,
+      status: 'Confirmed',
       total_amount: total,
-      items: fullItems
+      items: fullItems,
     });
 
     setIsAddModalOpen(false);
     setSelectedCustomerId('');
-    setOrderItems([{ product_id: '', quantity: 1, price: 0 }]);
+    setOrderItems([{ productId: '', quantity: 1, price: 0 }]);
   };
 
   const handleProductSelect = (index: number, productId: string) => {
-    const prod = products.find(p => p.id === productId);
+    const prod = products.find(p => p._id === productId);
     const newItems = [...orderItems];
-    newItems[index] = { 
-      product_id: productId, 
-      quantity: newItems[index].quantity, 
-      price: prod?.selling_price || 0 
-    };
+    newItems[index] = { productId, quantity: newItems[index].quantity, price: prod?.selling_price || 0 };
     setOrderItems(newItems);
   };
 
   const formatINR = (amt: number) => `₹${amt.toLocaleString('en-IN')}`;
+
+  // Helper to get customer name from populated or flat customerId
+  const getCustomerInfo = (order: typeof orders[0]) => {
+    if (typeof order.customerId === 'object' && order.customerId !== null) {
+      return order.customerId as { _id: string; name: string; phone: string; email: string };
+    }
+    return customers.find(c => c._id === order.customerId);
+  };
 
   return (
     <div className="page-container" style={{ padding: 0 }}>
@@ -90,10 +93,10 @@ export const Orders: React.FC = () => {
             </thead>
             <tbody>
               {orders.map(order => {
-                const customer = customers.find(c => c.id === order.customer_id);
+                const customer = getCustomerInfo(order);
                 return (
-                  <tr key={order.id}>
-                    <td style={{ fontWeight: 600 }}>{order.id}</td>
+                  <tr key={order._id}>
+                    <td style={{ fontWeight: 600, fontSize: '0.8rem' }}>#{order._id.slice(-8).toUpperCase()}</td>
                     <td>{new Date(order.order_date).toLocaleDateString()}</td>
                     <td>
                       <div>{customer?.name || 'Unknown'}</div>
@@ -108,10 +111,26 @@ export const Orders: React.FC = () => {
                     <td>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         {order.status === 'Confirmed' && (
-                          <button className="btn btn-ghost" title="Complete Order" onClick={() => updateOrder(order.id, 'Completed')} style={{ padding: '0.25rem' }}><Eye size={16} /></button>
+                          <button className="btn btn-ghost" title="Complete Order" onClick={() => updateOrder(order._id, 'Completed')} style={{ padding: '0.25rem' }}>
+                            <Eye size={16} />
+                          </button>
                         )}
-                        <button className="btn btn-ghost" title="Generate Invoice" onClick={() => { generateInvoice(order.id); setToast('Invoice generated successfully!'); setTimeout(() => setToast(''), 3000); }} style={{ padding: '0.25rem', color: 'var(--color-accent-dark)' }}><Receipt size={16} /></button>
-                        <button className="btn btn-ghost" title="Delete Order" onClick={() => { if(window.confirm('Are you sure you want to delete this order?')) deleteOrder(order.id); }} style={{ padding: '0.25rem', color: 'var(--color-danger)' }}><Trash2 size={16} /></button>
+                        <button
+                          className="btn btn-ghost"
+                          title="Generate Invoice"
+                          onClick={() => generateInvoice(order._id)}
+                          style={{ padding: '0.25rem', color: 'var(--color-accent-dark)' }}
+                        >
+                          <Receipt size={16} />
+                        </button>
+                        <button
+                          className="btn btn-ghost"
+                          title="Delete Order"
+                          onClick={() => { if (window.confirm('Delete this order?')) deleteOrder(order._id); }}
+                          style={{ padding: '0.25rem', color: 'var(--color-danger)' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -119,7 +138,7 @@ export const Orders: React.FC = () => {
               })}
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '3rem' }}>No orders found. Add a new order to get started.</td>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '3rem' }}>No orders found. Create a new order to get started.</td>
                 </tr>
               )}
             </tbody>
@@ -137,7 +156,7 @@ export const Orders: React.FC = () => {
                 <label className="input-label">Customer</label>
                 <select className="input-field" required value={selectedCustomerId} onChange={e => setSelectedCustomerId(e.target.value)}>
                   <option value="">Select a customer...</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {customers.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </div>
 
@@ -146,29 +165,32 @@ export const Orders: React.FC = () => {
                 {orderItems.map((item, idx) => (
                   <div key={idx} style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                     <div style={{ flex: 2 }}>
-                      <select required className="input-field" value={item.product_id} onChange={e => handleProductSelect(idx, e.target.value)}>
+                      <select required className="input-field" value={item.productId} onChange={e => handleProductSelect(idx, e.target.value)}>
                         <option value="">Select product...</option>
                         {products.map(p => (
-                          <option key={p.id} value={p.id} disabled={p.stock_quantity === 0}>
+                          <option key={p._id} value={p._id} disabled={p.stock_quantity === 0}>
                             {p.name} - ₹{p.selling_price} ({p.stock_quantity === 0 ? 'Out of Stock' : `Stock: ${p.stock_quantity}`})
                           </option>
                         ))}
                       </select>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <input type="number" min="1" required className="input-field" placeholder="Qty" value={item.quantity} onChange={e => {
-                        const newItems = [...orderItems];
-                        newItems[idx].quantity = Number(e.target.value);
-                        setOrderItems(newItems);
-                      }} />
+                      <input
+                        type="number" min="1" required className="input-field" placeholder="Qty"
+                        value={item.quantity}
+                        onChange={e => {
+                          const newItems = [...orderItems];
+                          newItems[idx].quantity = Number(e.target.value);
+                          setOrderItems(newItems);
+                        }}
+                      />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
                       {formatINR(item.price * item.quantity)}
                     </div>
                   </div>
                 ))}
-                
-                <button type="button" className="btn btn-ghost" onClick={() => setOrderItems([...orderItems, { product_id: '', quantity: 1, price: 0 }])}>
+                <button type="button" className="btn btn-ghost" onClick={() => setOrderItems([...orderItems, { productId: '', quantity: 1, price: 0 }])}>
                   <Plus size={16} /> Add another item
                 </button>
               </div>
@@ -186,13 +208,6 @@ export const Orders: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className="toast-container">
-          <CheckCircle size={20} />
-          <span>{toast}</span>
         </div>
       )}
     </div>

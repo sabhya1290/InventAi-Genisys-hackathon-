@@ -1,9 +1,9 @@
 import React from 'react';
-import { Bell, Check, Info, AlertTriangle, Trash2 } from 'lucide-react';
+import { Bell, Check, Info, AlertTriangle, Trash2, CheckCheck } from 'lucide-react';
 import { useAppStore } from '../store/MockAppStore';
 
 export const Notifications: React.FC = () => {
-  const { notifications, markNotificationRead, deleteNotification } = useAppStore();
+  const { notifications, markNotificationRead, markAllNotificationsRead, deleteNotification } = useAppStore();
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -13,6 +13,8 @@ export const Notifications: React.FC = () => {
     }
   };
 
+  const unreadCount = notifications.filter(n => n.status === 'unread').length;
+
   return (
     <div className="page-container" style={{ padding: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -20,6 +22,11 @@ export const Notifications: React.FC = () => {
           <h1 style={{ color: 'var(--color-primary-dark)' }}>Notifications</h1>
           <p style={{ color: 'var(--color-text-light)' }}>Log of system alerts, low stock warnings, and order updates.</p>
         </div>
+        {unreadCount > 0 && (
+          <button className="btn btn-outline" onClick={markAllNotificationsRead} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <CheckCheck size={16} /> Mark All Read ({unreadCount})
+          </button>
+        )}
       </div>
 
       <div className="card" style={{ padding: 0 }}>
@@ -31,10 +38,10 @@ export const Notifications: React.FC = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {notifications.map(n => (
-              <div 
-                key={n.id} 
-                style={{ 
-                  padding: '1.5rem', 
+              <div
+                key={n._id}
+                style={{
+                  padding: '1.5rem',
                   borderBottom: '1px solid var(--color-border)',
                   backgroundColor: n.status === 'unread' ? 'var(--color-surface-hover)' : 'transparent',
                   display: 'flex',
@@ -43,39 +50,35 @@ export const Notifications: React.FC = () => {
                   transition: 'background-color 0.2s',
                 }}
               >
-                <div style={{ 
-                  width: '40px', height: '40px', 
-                  borderRadius: '50%', 
+                <div style={{
+                  width: '40px', height: '40px',
+                  borderRadius: '50%',
                   backgroundColor: 'var(--color-surface)',
                   border: `1px solid var(--color-${n.type === 'alert' ? 'warning' : 'info'})`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   {getIcon(n.type)}
                 </div>
-                
+
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                     <h4 style={{ margin: 0, color: n.status === 'unread' ? 'var(--color-primary-dark)' : 'var(--color-text)', fontWeight: n.status === 'unread' ? 600 : 400 }}>
                       {n.type === 'alert' ? 'System Alert' : 'Information'}
                     </h4>
                     <small style={{ color: 'var(--color-text-light)' }}>
-                      {new Date(n.created_at).toLocaleString()}
+                      {new Date(n.createdAt).toLocaleString()}
                     </small>
                   </div>
                   <p style={{ margin: 0, color: 'var(--color-text)', fontSize: '0.95rem' }}>{n.message}</p>
                 </div>
-                
+
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   {n.status === 'unread' && (
-                    <button 
-                      className="btn btn-ghost"
-                      onClick={() => markNotificationRead(n.id)}
-                      title="Mark as read"
-                    >
+                    <button className="btn btn-ghost" onClick={() => markNotificationRead(n._id)} title="Mark as read">
                       <Check size={18} />
                     </button>
                   )}
-                  <button className="btn btn-ghost" onClick={() => deleteNotification(n.id)} title="Delete Notification" style={{ color: 'var(--color-text-light)' }}>
+                  <button className="btn btn-ghost" onClick={() => deleteNotification(n._id)} title="Delete" style={{ color: 'var(--color-text-light)' }}>
                     <Trash2 size={18} />
                   </button>
                 </div>

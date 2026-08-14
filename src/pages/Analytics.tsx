@@ -20,7 +20,7 @@ export const Analytics: React.FC = () => {
   const totalRevenue = orders.reduce((acc, o) => acc + o.total_amount, 0);
   const totalCost = orders.reduce((acc, o) => {
     return acc + o.items.reduce((sum, item) => {
-      const prod = products.find(p => p.id === item.product_id);
+      const prod = products.find(p => p._id === item.productId);
       return sum + (prod ? (prod.purchase_price * item.quantity) : 0);
     }, 0);
   }, 0);
@@ -51,19 +51,19 @@ export const Analytics: React.FC = () => {
   // Product Distribution & Sales maps
   const productSalesMap: Record<string, number> = {};
   orders.forEach(o => o.items.forEach(i => {
-    productSalesMap[i.product_id] = (productSalesMap[i.product_id] || 0) + i.quantity;
+    productSalesMap[i.productId] = (productSalesMap[i.productId] || 0) + i.quantity;
   }));
   
   const topSelling = Object.entries(productSalesMap)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([id, qty]) => {
-      const p = products.find(prod => prod.id === id);
+      const p = products.find(prod => prod._id === id);
       return { name: p ? p.name : 'Unknown', sales: qty };
     });
 
   const slowMoving = products
-    .filter(p => !productSalesMap[p.id] || productSalesMap[p.id] < 5)
+    .filter(p => !productSalesMap[p._id] || productSalesMap[p._id] < 5)
     .slice(0, 5)
     .map(p => ({ name: p.name, stock: p.stock_quantity }));
 

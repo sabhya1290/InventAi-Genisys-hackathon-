@@ -10,7 +10,10 @@ export const Customers: React.FC = () => {
   const [newCust, setNewCust] = useState<Partial<Customer>>({ name: '', phone: '', email: '', address: '' });
 
   const getCustomerStats = (customerId: string) => {
-    const custOrders = orders.filter(o => o.customer_id === customerId);
+    const custOrders = orders.filter(o => {
+      const cid = typeof o.customerId === 'object' ? (o.customerId as any)._id : o.customerId;
+      return cid === customerId;
+    });
     const totalSpent = custOrders.reduce((acc, o) => acc + o.total_amount, 0);
     return { ordersCount: custOrders.length, totalSpent };
   };
@@ -19,7 +22,7 @@ export const Customers: React.FC = () => {
 
   const openEdit = (c: Customer) => {
     setNewCust(c);
-    setEditingId(c.id);
+    setEditingId(c._id);
     setIsModalOpen(true);
   };
 
@@ -34,7 +37,7 @@ export const Customers: React.FC = () => {
     if (editingId) {
       updateCustomer(editingId, newCust);
     } else {
-      addCustomer(newCust as Omit<Customer, 'id'>);
+      addCustomer(newCust as Omit<Customer, '_id' | 'createdAt'>);
     }
     closeModal();
   };
@@ -59,9 +62,9 @@ export const Customers: React.FC = () => {
 
       <div className="grid grid-cols-3">
         {customers.map(customer => {
-          const stats = getCustomerStats(customer.id);
+          const stats = getCustomerStats(customer._id);
           return (
-            <div key={customer.id} className="card card-hover" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div key={customer._id} className="card card-hover" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <div style={{ width: '45px', height: '45px', borderRadius: '50%', backgroundColor: 'var(--color-primary-light)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>
@@ -69,15 +72,15 @@ export const Customers: React.FC = () => {
                   </div>
                   <div>
                     <h3 style={{ margin: 0 }}>{customer.name}</h3>
-                    <small style={{ color: 'var(--color-text-light)' }}>ID: {customer.id}</small>
+                    <small style={{ color: 'var(--color-text-light)' }}>ID: #{customer._id.slice(-6)}</small>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.25rem' }}>
                   <button className="btn btn-ghost" style={{ padding: '0.25rem' }} onClick={() => openEdit(customer)}><Edit2 size={16} /></button>
-                  <button className="btn btn-ghost" style={{ padding: '0.25rem', color: 'var(--color-danger)' }} onClick={() => handleDelete(customer.id)}><Trash2 size={16} /></button>
+                  <button className="btn btn-ghost" style={{ padding: '0.25rem', color: 'var(--color-danger)' }} onClick={() => handleDelete(customer._id)}><Trash2 size={16} /></button>
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', color: 'var(--color-text)' }}>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.875rem' }}>
                   <Phone size={14} color="var(--color-text-light)" /> {customer.phone}
@@ -104,7 +107,7 @@ export const Customers: React.FC = () => {
           );
         })}
       </div>
-      
+
       {customers.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
           No customers recorded yet. Click 'Add Customer' to start.
@@ -119,21 +122,20 @@ export const Customers: React.FC = () => {
             <form onSubmit={handleSubmit}>
               <div className="input-group">
                 <label className="input-label">Full Name</label>
-                <input required className="input-field" value={newCust.name} onChange={e => setNewCust({...newCust, name: e.target.value})} />
+                <input required className="input-field" value={newCust.name} onChange={e => setNewCust({ ...newCust, name: e.target.value })} />
               </div>
               <div className="input-group">
                 <label className="input-label">Phone Number</label>
-                <input required className="input-field" value={newCust.phone} onChange={e => setNewCust({...newCust, phone: e.target.value})} />
+                <input required className="input-field" value={newCust.phone} onChange={e => setNewCust({ ...newCust, phone: e.target.value })} />
               </div>
               <div className="input-group">
                 <label className="input-label">Email (Optional)</label>
-                <input type="email" className="input-field" value={newCust.email} onChange={e => setNewCust({...newCust, email: e.target.value})} />
+                <input type="email" className="input-field" value={newCust.email} onChange={e => setNewCust({ ...newCust, email: e.target.value })} />
               </div>
               <div className="input-group">
                 <label className="input-label">Address (Optional)</label>
-                <textarea className="input-field" value={newCust.address} onChange={e => setNewCust({...newCust, address: e.target.value})} />
+                <textarea className="input-field" value={newCust.address} onChange={e => setNewCust({ ...newCust, address: e.target.value })} />
               </div>
-              
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
                 <button type="button" className="btn btn-outline" onClick={closeModal}>Cancel</button>
                 <button type="submit" className="btn btn-primary">{editingId ? 'Save Changes' : 'Save Customer'}</button>

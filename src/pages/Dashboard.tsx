@@ -115,8 +115,8 @@ export const Dashboard: React.FC = () => {
                 </thead>
                 <tbody>
                   {orders.slice(0, 5).map(order => (
-                    <tr key={order.id} style={{ cursor: 'pointer' }} onClick={() => navigate('/orders')}>
-                      <td>{order.id}</td>
+                    <tr key={order._id} style={{ cursor: 'pointer' }} onClick={() => navigate('/orders')}>
+                      <td style={{ fontSize: '0.8rem' }}>#{order._id.slice(-8).toUpperCase()}</td>
                       <td>{new Date(order.order_date).toLocaleDateString()}</td>
                       <td>
                         <span className={`badge badge-${order.status === 'Completed' ? 'success' : order.status === 'Pending' ? 'warning' : 'info'}`}>
@@ -177,11 +177,11 @@ export const Dashboard: React.FC = () => {
             </div>
             <div className="alerts-list" style={{ marginTop: '1rem' }}>
               {notifications.slice(0, 3).map(n => (
-                <div key={n.id} className="alert-item">
+                <div key={n._id} className="alert-item">
                   <div className={`alert-indicator ${n.type}`}></div>
                   <div className="alert-content">
                     <p>{n.message}</p>
-                    <small>{new Date(n.created_at).toLocaleTimeString()}</small>
+                    <small>{new Date(n.createdAt).toLocaleTimeString()}</small>
                   </div>
                 </div>
               ))}
